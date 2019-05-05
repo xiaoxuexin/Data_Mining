@@ -1,0 +1,93 @@
+---
+title: "STATS415_HW11"
+author: 'Xiaoxue Xin; uniquename: xiaoxuex'
+date: "4876 5091; Section 002"
+output:
+  html_document:
+    df_print: paged
+---
+
+## (a)
+
+```{r}
+data("USArrests")
+hc.complete = hclust(dist(USArrests), method = 'complete')
+plot(hc.complete, main = 'Complete Linkage', xlab = '', sub = '', cex = .9)
+```
+
+## (b)
+
+
+```{r}
+cutree(hc.complete, 3)
+library(cluster)
+sil.complete = silhouette(cutree(hc.complete, 3), dist = dist(USArrests))
+plot(sil.complete)
+```
+
+The result of states belongs are shown above. The silhouette coefficient si is 1-ai/bi, in which ai means the distance to the points in its cluster, and bi means the distance to points in other clusters. So we want the silhouette coefficient goes to 1 as close as possible. But if it is negative value, then we may be have a unreasonable result. From the plot, we can see that all values are positive, and their mean in three classes are slightly greater than 0.5. Thus the result may be fine.
+
+## (c)
+
+
+```{r}
+hc.single = hclust(dist(USArrests), method = 'single')
+plot(hc.single, main = 'Single Linkage', xlab = '', sub = '', cex = .9)
+cutree(hc.single, 3)
+sil.single = silhouette(cutree(hc.single, 3), dist = dist(USArrests))
+plot(sil.single)
+```
+
+When we use single linkage, nearly all of the states are in class 1, which maybe not desirable. And the silhouette coefficients of class 2 and 3 are negative. So it is worse than complete linkage clustering.
+
+## (d)
+
+```{r}
+km.out = kmeans(USArrests, 3, nstart = 20)
+km.out
+sil.km = silhouette(km.out$cluster, dist(USArrests))
+plot(sil.km)
+```
+
+In our model, we set the initial number as 20, and K-means clustering will be performed using multiple random assignments for initial cluster assignments.
+From the silhouette coefficient plot, the result is fine. The clustering result maybe as good as complete linkage in hierarchical clustering.
+
+## (e)
+
+```{r}
+usasc = scale(USArrests)
+hc.sc.complete = hclust(dist(usasc), method = 'complete')
+plot(hc.sc.complete, main = 'Complete Linkage', xlab = '', sub = '', cex = .9)
+```
+
+```{r}
+cutree(hc.sc.complete, 3)
+sil.sc.complete = silhouette(cutree(hc.sc.complete, 3), dist = dist(usasc))
+plot(sil.sc.complete)
+```
+
+```{r}
+hc.sc.single = hclust(dist(usasc), method = 'single')
+plot(hc.sc.single, main = 'Single Linkage', xlab = '', sub = '', cex = .9)
+cutree(hc.sc.single, 3)
+sil.sc.single = silhouette(cutree(hc.sc.single, 3), dist = dist(usasc))
+plot(sil.sc.single)
+```
+
+```{r}
+km.sc.out = kmeans(usasc, 3, nstart = 20)
+km.sc.out
+sil.sc.km = silhouette(km.sc.out$cluster, dist(usasc))
+plot(sil.sc.km)
+```
+
+
+In our model, we set the initial number as 20, and K-means clustering will be performed using multiple random assignments for initial cluster assignments.
+
+
+## (f)
+From the silhouette coefficient plot, we can see that the results of both complete linkage and single linkage are worse than non-scaling ones. There also occur negative value in K-means clustering. In my opinion, we shouldn't scale the data before clustering. When the magnitudes of the different variables are large, we need to consider about scaling to avoid dominant variables. But in our data, we don't need scaling.
+
+
+
+

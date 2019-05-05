@@ -1,0 +1,92 @@
+---
+title: "STATS415_HW7"
+author: "Xiaoxue Xin"
+date: "4876 5091"
+output: word_document
+---
+
+## 1.
+
+```{r}
+library(ISLR)
+attach(College)
+X <- model.matrix(Apps~., data = College)[,-1]
+plot(eigen(cov(X))$values, main = "scree plot", xlab = 'Component numbers', ylab = 'Eigenvalues', type = 'b')
+abline(h = 1, lty = 2)
+eigenvalue = eigen(cov(X))$values
+sum(eigenvalue[1:2])/sum(eigenvalue)
+sum(eigenvalue[1:3])/sum(eigenvalue)
+appPCA <- prcomp(x = X, center = T, scale = F)
+summary(appPCA)
+```
+
+From the plot and summary result, we can see that two components can explain 87.55% variance, and three components can explain 95.36% variance. Thus, we need three eigenvalues to explain 90% of variance.
+
+The loadings of first two principles are shown below.
+
+```{r}
+appPCA$rotation[,1:2]
+```
+
+From the result, we can see that the two loadings are PC direction vectors. They are coefficients of linear combination of predictors. And the new predictors, after transformation, can explain 87.55% variance of the original data.
+
+## 2.
+
+```{r}
+set.seed(23456)
+test_id = sample(1:nrow(College), size = trunc(0.3 * nrow(College)))
+train_id = setdiff(seq(1,nrow(College)), test_id)
+library(pls)
+appsPCR <- pcr(Apps~., data = College, subset = train_id, scale = TRUE, validation = 'CV')
+validationplot(appsPCR, val.type = 'MSEP', legendpos = 'topright')
+summary(appsPCR)
+```
+
+From the plot, we can see that when K = 17, we get the smallest mean squared error. So, by cross validation, we choose K = 17.
+
+```{r}
+set.seed(23456)
+appsPCRtrain.pred <- predict(appsPCR, College[train_id, names(College) != 'Apps'], ncomp = 17)
+PCRTrainMSE <- mean((appsPCRtrain.pred - College[train_id, 'Apps'])^2)
+PCRTrainMSE
+appsPCR.pred <- predict(appsPCR, College[-train_id, names(College) != 'Apps'], ncomp = 17)
+PCRTestMSE <- mean((appsPCR.pred - College[-train_id, 'Apps'])^2)
+PCRTestMSE
+```
+
+From the result, we can see that the training error is 993164.6, and the test error is 1300431.
+
+## 3.
+
+
+```{r}
+set.seed(23456)
+appsPLS <- plsr(Apps~., data = College, subset = train_id, scale = TRUE, validation = 'CV')
+validationplot(appsPLS, val.type = 'MSEP', legendpos = 'topright')
+summary(appsPLS)
+```
+
+From the plot, we can see tht after K = 5, the curve becaomes stable. So we may choose K = 5, which is also good for interpretation. 
+
+```{r}
+set.seed(23456)
+appsPLStrain.pred <- predict(appsPLS, College[train_id, names(College) != 'Apps'], ncomp = 5)
+PLSTrainMSE <- mean((appsPLStrain.pred - College[train_id, 'Apps'])^2)
+PLSTrainMSE
+appsPLS.pred <- predict(appsPLS, College[-train_id, names(College) != 'Apps'], ncomp = 5)
+PLSTestMSE <- mean((appsPLS.pred - College[-train_id, 'Apps'])^2)
+PLSTestMSE
+```
+
+From the result, we can see that the training error is 1038248, and the test error is 1409511.
+
+## 4.
+
+Comparing the two models, pcr and pls, we can see that pcr test error is smaller than pls. The test error of pcr is the same with linear regression, since we use 17 components. And the test error of pcr is greater than ridge, AIC, and lasso. Thus, this may suggest that ridge regression model performs best on test data and we choose ridge model.
+
+
+
+
+
+
+

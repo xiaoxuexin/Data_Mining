@@ -1,0 +1,266 @@
+---
+title: "STATS415_HW6"
+author: "Xiaoxue Xin; unique name: xiaoxuex"
+date: "UMID: 4876 5091; Section 002"
+output: word_document
+---
+
+## 1.
+(a)(3)As we increase s from 0, the number of variables included in the model steadily increases. As s increases, the constraints are weaker. So there will be more variables in the model.
+
+(b)(4)As we increase s from 0, the training RSS steadily decreases. The RSS will decrease as the number of variables increases.
+
+(c)(4)As we increase s from 0, the test RSS steadily decreases. The RSS will decrease as the number of variables increases.
+
+(d)(1)As we increase s from 0, the variance of βˆ increases initially, and then eventually starts decreasing. As s increases, the variance has inverse trend compared with  bias.
+
+(d)(2)As we increase s from 0, the squared bias of βˆ decreases initially, and then eventually starts increasing. As s increases, the constraint diamond for β will be near to unbieas point, and then far from it.
+
+## 2.
+## (a)
+First, we split the data set into a training set and a test set.
+```{r}
+library(ISLR)
+data(College)
+set.seed(23456)
+train_id = sample(1:nrow(College), size = trunc(0.7 * nrow(College)))
+col_train = College[train_id,]
+col_test = College[-train_id,]
+```
+
+## (b)
+
+Fit a linear model on the training set.
+
+```{r cars}
+attach(College)
+model = lm(Apps ~., data = col_train)
+summary(model)
+```
+
+
+```{r}
+train_mse = mean((Apps - predict(model, College))[train_id]^2)
+train_mse
+test_mse = mean((Apps - predict(model, College))[-train_id]^2)
+test_mse
+```
+
+The training error is 1228844, and the test error is 738611.2.
+
+## (c)
+Perform forward and backward selection on the previous model with the threshold α = 0.05.
+
+The forward selection:
+```{r}
+#library(leaps)
+library(SignifReg)
+#regfit.fwd = regsubsets(Apps~., data = col_train, nvmax = 17, method = "forward")
+#summary(regfit.fwd)
+scope1 <- Apps~.
+model1 <- SignifReg(scope=scope1,data=col_train,alpha=0.05, direction="forward", criterion="p-value", correction="None")
+summary(model1)
+```
+
+The p-values in model1 are smaller  than 0.05. So model1 is what we want.
+The variables are Accept, Top10perc, Top25perc, F.Undergrad, Outstate, Expend, Room.Board, Grad.Rate, PrivateYes, PhD and Enroll based on the forward selection in the model.
+
+```{r}
+train_fwd_mse = mean((Apps - predict(model1, College))[train_id]^2)
+train_fwd_mse
+test_fwd_mse = mean((Apps - predict(model1, College))[-train_id]^2)
+test_fwd_mse
+```
+
+The training and test error in the model selected by forward selection are 1237635 and 724578.
+
+The backward selection:
+```{r}
+#regfit.bwd = regsubsets(Apps~., data = col_train, nvmax = 17, method = "backward")
+#summary(regfit.bwd)
+scope2 <- Apps~.
+model2 <- SignifReg(scope=scope2,data=col_train,alpha=0.05, direction="backward", criterion="p-value", correction="None")
+summary(model2)
+```
+
+From the result, we can see that all p-values are smaller than 0.05 in model2, which is satisfied the conditions.
+So the model we get with backward selection is model2. And the variables included are Private, Accept, Enroll, Top10perc, Top25perc, F.Undergrad, Outstate, Room.Board, PhD, Expend, and Grad.Rate.
+
+```{r}
+train_bwd_mse = mean((Apps - predict(model2, College))[train_id]^2)
+train_bwd_mse
+test_bwd_mse = mean((Apps - predict(model2, College))[-train_id]^2)
+test_bwd_mse
+```
+
+The training error and test error in the model selected by backward selection are 1237635 and 724578.
+
+## (d)
+
+```{r}
+library(leaps)
+regfit.full = regsubsets(Apps ~., data = col_train, nvmax = 17)
+reg.summary = summary(regfit.full)
+names(reg.summary)
+plot(reg.summary$cp, xlab = 'num of var', ylab = 'AIC', type = 'l')
+which.min(reg.summary$cp)
+points(12, reg.summary$cp[12], col = 'red', cex = 2, pch = 20)
+```
+
+We choose 12 variables based on AIC. The variables chosen by AIC are shown on the below.
+
+```{r}
+plot(regfit.full, scale = "Cp")
+coef(regfit.full,12)
+```
+The variables included in model are Private, Accept, Enroll, Top10perc, Top25perc, F.Undergrad, P.Undergrad, Outstate, Room.Board, PhD, Expend, Grad.Rate based on AIC.
+```{r}
+plot(reg.summary$bic, xlab = 'num of var', ylab = 'BIC', type = 'l')
+which.min(reg.summary$bic)
+points(9, reg.summary$bic[9], col = 'red', cex = 2, pch = 20)
+```
+
+We choose 9-variable model with BIC. The variables chosen by BIC are shown on the below.
+
+```{r}
+plot(regfit.full, scale = "bic")
+coef(regfit.full, 9)
+```
+
+The variables included in model are Accept, Enroll, Top10perc, Top25perc, F.Undergrad, Outstate, Room.Board, Expend, Grad.Rate based on BIC.
+
+The training error of AIC:
+```{r}
+train.mat = model.matrix(Apps~., data = col_train)
+aic.coefi = coef(regfit.full, id = 12)
+aic.train.pred = train.mat[,names(aic.coefi)]%*%aic.coefi
+aic.train.error = mean((Apps[train_id] - aic.train.pred)^2)
+aic.train.error
+```
+
+The training error of AIC is 1232282.
+
+The test error of AIC:
+```{r}
+test.mat = model.matrix(Apps~., data = col_test)
+aic.test.pred = test.mat[,names(aic.coefi)]%*%aic.coefi
+aic.test.error = mean((Apps[-train_id] - aic.test.pred)^2)
+aic.test.error
+```
+
+The test error of AIC is 732162.9.
+
+The training error of BIC:
+
+```{r}
+bic.coefi = coef(regfit.full, id = 9)
+bic.train.pred = train.mat[,names(bic.coefi)]%*%bic.coefi
+bic.train.error = mean((Apps[train_id] - bic.train.pred)^2)
+bic.train.error
+```
+
+The training error of BIC is 1263519.
+
+The test error of BIC:
+
+```{r}
+bic.test.pred = test.mat[,names(bic.coefi)]%*%bic.coefi
+bic.test.error = mean((Apps[-train_id] - bic.test.pred)^2)
+bic.test.error
+```
+
+The test error of BIC is 760046.7.
+
+## (e)
+
+```{r}
+library(glmnet)
+X = model.matrix(Apps~.,College)[, -1]
+y = College$Apps
+cv.out = cv.glmnet(X[train_id,], y[train_id], alpha = 0)
+plot(cv.out)
+bestlam = cv.out$lambda.min
+bestlam
+
+```
+
+We choose lambda by cross-validation. The value of lambda is 432.7762. 
+
+```{r}
+ridge.mod = glmnet(X[train_id,], y[train_id], alpha = 0, lambda = bestlam)
+coef(ridge.mod)
+```
+
+The training error and test error are shown below.
+
+```{r}
+rigde.pred_train = predict(ridge.mod, s = bestlam, newx = X[train_id,])
+mean((rigde.pred_train - y[train_id])^2)
+ridge.pred_test = predict(ridge.mod, s = bestlam, newx = X[-train_id,])
+mean((ridge.pred_test - y[-train_id])^2)
+```
+
+The training error and test error in the ridge regression model are 1646491 and 722396.6.
+
+## (f)
+
+We choose lambda by cross-validation.
+
+```{r}
+set.seed(23456)
+cv.outlas = cv.glmnet(X[train_id,], y[train_id], alpha = 1)
+plot(cv.outlas)
+bestlamlas = cv.outlas$lambda.min
+bestlamlas
+lasso.mod = glmnet(X[train_id,], y[train_id], alpha = 1, lambda = bestlamlas)
+
+```
+
+
+The value of lambda is 21.53937 And lasso coefficients are shown below.
+```{r}
+lasso.coef = predict(lasso.mod, type = "coefficients", s = bestlamlas)[1:18,]
+lasso.coef
+```
+
+From the result, we know that the variables are Private, Accept, Enroll, Top10perc, Top25perc, P.Undergrad, Outstate, Room.Board, PhD, Terminal, S.F.Ratio, Expend and Grad.Rate.
+
+The training and test error in lasso regression:
+```{r}
+lasso.pred_train = predict(lasso.mod, s = bestlamlas, newx = X[train_id,])
+mean((lasso.pred_train - y[train_id])^2)
+lasso.pred_test = predict(lasso.mod, s = bestlamlas, newx = X[-train_id,])
+mean((lasso.pred_test - y[-train_id])^2)
+```
+
+The training and test error in lasso regression are 1286253 and 620662.
+
+## (g)
+
+In the linear model in (b), the test error is 738611.2.
+In the forward selection model, the test error is 724578.
+In the backward selection model, the test error is 724578.
+In the AIC model, the test error is 732162.9.
+In the BIC model, the test error is 760046.7.
+In the ridge regression model, the test error is 722396.6.
+In the lasso regression model, the test error is 620662.
+
+Since the error is large, the prediction won't be very accurate.
+From above result, we can see that there is slightly difference between different approaches. The BIC model has biggest test error, and the lasso regression has smallest test error. Personally, I will recommend lasso regression, since it has least test error.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

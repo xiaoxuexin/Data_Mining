@@ -1,0 +1,132 @@
+---
+title: "STATS415_HW9"
+author: 'Xiaoxue Xin; unique name: xiaoxuex'
+date: "4876 5091; Section 002"
+output:
+  html_document:
+    df_print: paged
+---
+
+## (1)
+
+First, we select 80% data as our training data.
+```{r}
+library(MASS)
+data("crabs")
+B = which(crabs$sp=='B')
+M = which(crabs$sex == 'M')
+O = which(crabs$sp == 'O')
+FM = which(crabs$sex == 'F')
+BM = intersect(B,M)
+BF = intersect(B,FM)
+OM = intersect(O,M)
+OF = intersect(O,FM)
+set.seed(45678)
+train_id1 = sample(BM, trunc(length(BM)*0.8))
+train_id2 = sample(BF, trunc(length(BF)*0.8))
+train_id3 = sample(OM, trunc(length(OM)*0.8))
+train_id4 = sample(OF, trunc(length(OF)*0.8))
+TR1 = union(train_id1,train_id2)
+TR2 = union(train_id3,train_id4)
+train_id = union(TR1,TR2)
+```
+
+## (2)
+
+
+```{r}
+library(tree)
+set.seed(45678)
+tree.sp.model = tree(sp~ sex+FL+RW+CL+CW+BD, data = crabs, subset = train_id)
+cv.crabs = cv.tree(tree.sp.model,  FUN = prune.misclass)
+plot(cv.crabs$size, cv.crabs$dev, ylab = 'cv error', xlab = 'size', type = 'b')
+plot(cv.crabs$k, cv.crabs$dev, ylab = 'k', type = 'b')
+```
+
+The plot shows that cv error decreases as nodes of tree increases. However, with constraint that there are no more than eight splits, we may choose tree model with nodes no more than nine. 
+```{r}
+set.seed(45678)
+prune.crabs = prune.misclass(tree.sp.model, best = 8)
+plot(prune.crabs)
+text(prune.crabs, pretty = 0)
+summary(prune.crabs)
+```
+
+From the result, we can see that the variables we used in construction are FL, CW, and BD.
+
+```{r}
+set.seed(45678)
+crab.test = crabs[-train_id,]
+crab.sp.train = crabs$sp[train_id]
+crab.sp.test = crabs$sp[-train_id]
+train.tree.pred = predict(prune.crabs, crabs[train_id,], type = 'class')
+test.tree.pred = predict(prune.crabs, crab.test, type = 'class')
+table(train.tree.pred,crab.sp.train)
+table(test.tree.pred,crab.sp.test)
+```
+
+The training error is (9+4)/160 = 0.08125; test error is (1+0)/40 = 0.025.
+
+
+## (3)
+
+
+```{r}
+library(randomForest)
+set.seed(45678)
+rf.crabs = randomForest(sp~ sex+FL+RW+CL+CW+BD, data = crabs, subset = train_id, mtry = 3, ntree = 1000)
+varImpPlot(rf.crabs)
+```
+
+The result indicates that the FL variable is most important, and CW, BD are also very important. This result is consistent with the variables selected by single tree model.
+
+```{r}
+set.seed(45678)
+test.rf.pred = predict(rf.crabs, newdata = crabs[-train_id,], type = 'class')
+table(rf.crabs$predicted,crab.sp.train)
+table(test.tree.pred,crab.sp.test)
+```
+
+From the result, we can see that the training error is (10+9)/160 = 0.11875, and the test error is 1/40 = 0.025.
+
+## (4)
+
+
+```{r}
+library(gbm)
+set.seed(45678)
+test_error = rep(0,100)
+train_error = rep(0,100)
+crabs$sp_level = ifelse(crabs$sp == 'B', 1, 0 )
+for (i in 1:100) {
+  n = 10*i
+  boost.crabs = gbm(sp_level~ sex+FL+RW+CL+CW+BD, data = crabs[train_id,], distribution = 'adaboost', n.trees = n)
+  boost.test.pred = predict(boost.crabs, newdata = crabs[-train_id,], n.trees = n, type = 'response')
+  boost.test.pred = ifelse(boost.test.pred > 0.5, 1, 0)
+  test_error[i] = mean(boost.test.pred != crabs[-train_id,"sp_level"])
+  
+  boost.train.pred = predict(boost.crabs, newdata = crabs[train_id,], n.trees = n, type = 'response')
+  boost.train.pred = ifelse(boost.train.pred > 0.5, 1, 0)
+  
+  train_error[i] = mean(boost.train.pred != crabs$sp_level[train_id])
+}
+plot(train_error)
+plot(test_error)
+which.min(train_error)
+train_error[13]
+which.min(test_error)
+test_error[10]
+
+```
+
+From the plots, we can see that when there are approximately 100 trees, we can get the minimum training and test errors. Before this value, the model is under fitting. But too many trees may lead to over fitting problem. The minimum training and test errors are approximately 0.30625 and 0.225, respectively.
+
+## (e)
+
+From the above result, we can see that when there is a single tree, the training error is 0.08125; test error is 0.025. When we use random forest to fit the model, training error is 0.11875, and the test error is 0.025. For boosting method, the minimum training and test errors are approximately 0.30625 and 0.225. Maybe the single tree perform best. The single tree and random forest have similar errors, and both of them are smaller than the errors of boosting method.
+
+
+
+
+
+

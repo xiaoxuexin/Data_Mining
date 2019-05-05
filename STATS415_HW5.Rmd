@@ -1,0 +1,209 @@
+---
+title: "STATS415_HW5"
+author: "Xiaoxue Xin; unique name: xiaoxuex"
+date: "4876 5091; Section 002"
+output: word_document
+---
+## 1.
+
+First, we generate training data and test data.
+```{r}
+library(ISLR)
+data(Auto)
+med_mpg = median(Auto$mpg)
+n = dim(Auto)[1]
+mpg01 = rep(0,n)
+for (i in 1:n) {
+  if (Auto$mpg[i] > med_mpg){
+    mpg01[i] = "1"
+  }
+}
+new_Auto = cbind(Auto, mpg01)
+set.seed(12345)
+class1 = which(new_Auto$mpg01 == 0)
+class2 = which(new_Auto$mpg01 == 1)
+train1 = sample(class1, size = floor(nrow(new_Auto[class1,])*.8))
+train2 = sample(class2, size = floor(nrow(new_Auto[class2,])*.8))
+train_id = cbind(train1,train2)
+train_auto = new_Auto[train_id,]
+test_auto = new_Auto[-train_id,]
+```
+
+Next, we will perform logistic regression with the four quantitative variables: displacement, horsepower, weight, acceleration.
+
+```{r}
+log_mod = glm(mpg01 ~ displacement + horsepower + weight + acceleration, data = train_auto, family = binomial)
+summary(log_mod)
+```
+
+From the result, we can see that the p-value of intercept and horsepower are less than 0.05. We can reject the null hypothesis that their coefficients are 0.The p-value of displacement is also small. But the p-value of coefficients of weight and acceleration are greater than 0.1. So we cannot reject the null hypothesis that their coefficients are 0. 
+
+## 2.
+
+Next, we compute the training error for logistic regression.
+
+```{r}
+class_error = function(actual, predicted){
+  mean(actual != predicted)
+}
+expit = function(x) exp(x)/(1 + exp(x))
+
+log_train_pred = predict(log_mod, train_auto)
+log_tra_pre_prob = expit(log_train_pred)
+train_prediction = rep(0,nrow(train_auto))
+train_prediction[log_tra_pre_prob > .5] = 1
+train_pred_fac = as.factor(train_prediction)
+class_error(train_auto$mpg01, train_pred_fac)
+```
+From the result, we can see that the training error is 0.1089744.
+
+```{r}
+log_test_pred = predict(log_mod, test_auto)
+log_test_pre_prob = expit(log_test_pred)
+test_prediction = rep(0, nrow(test_auto))
+test_prediction[log_test_pre_prob > .5] = 1
+test_pred_fac = as.factor(test_prediction)
+class_error(test_auto$mpg01, test_prediction)
+```
+From the result, the test error is 0.0875.
+
+```{r}
+plot(train_auto$displacement, train_auto$horsepower, col = c("blue","green")[train_auto$mpg01], xlab = "displacement",
+     ylab = "horsepower", main = "True class vs Predicted class by Log")
+points(train_auto$displacement, train_auto$horsepower, pch = c(2,3)[train_pred_fac])  
+legend("bottomright", c("true_mpg0","true_mpg1","pre_mpg0","pre_mpg1"), col = c("blue","green","black","black"), pch = c(1,1,2,3))
+
+```
+
+The plot of the training data points shows that most of the points are fitted well.
+
+```{r}
+plot(test_auto$displacement, test_auto$horsepower, col = c("blue","green")[test_auto$mpg01], xlab = "displacement",
+     ylab = "horsepower", main = "True class vs Predicted class by Log")
+points(test_auto$displacement, test_auto$horsepower, pch = c(2,3)[test_pred_fac])  
+legend("bottomright", c("true_mpg0","true_mpg1","pre_mpg0","pre_mpg1"), col = c("blue","green","black","black"), pch = c(1,1,2,3))
+
+```
+
+The plot of the test data points shows that most of the points are fitted well too.
+
+## 3.
+```{r}
+med_displ = median(train_auto$displacement)
+med_hor = median(train_auto$horsepower)
+med_weig = median(train_auto$weight)
+med_acc = median(train_auto$acceleration)
+point_pred = 13.2877094 + med_displ*(-0.0153865) + med_hor*(-0.0579451) + med_weig*(-0.0010545) + med_acc*(-0.1340170)
+expit(point_pred)
+```
+
+Since 0.6187401 is greater than 0.5, the prediction is 1.
+
+## 4.
+```{r}
+library(class)
+trainX = as.matrix(train_auto[c("displacement", "horsepower", "weight", "acceleration")])
+testX = as.matrix(test_auto[c("displacement", "horsepower", "weight", "acceleration")])
+set.seed(12345)
+kvals = c(1:10,15,20,30,50)
+knnTrainErr = vector(length = length(kvals))
+for (i in 1:length(kvals)) {
+  train_knn.pred = knn(train = trainX, test = trainX, cl = train_auto$mpg01, k = kvals[i])
+  knnTrainErr[i] = mean(train_knn.pred != train_auto$mpg01)
+}
+plot(knnTrainErr~kvals, type = "b",lwd = 2,col =  "blue", main = "training and test error")
+train_kmin = kvals[which.min(knnTrainErr)] 
+train_kmin
+knnTestErr = vector(length = length(kvals))
+for (i in 1:length(kvals)) {
+  test_knn.pred = knn(train = trainX, test = testX, cl = train_auto$mpg01, k = kvals[i])
+  knnTestErr[i] = mean(test_knn.pred != test_auto$mpg01)
+}
+lines(knnTestErr~kvals, type = "b",lwd = 2, col = "red")
+legend("bottomright", legend = c("training knn","test knn"), col = c("blue","red"),cex = .75,
+       lwd = c(2,2), pch = c(1,1), lty = c(1,1))
+test_kmin = kvals[which.min(knnTestErr)] 
+test_kmin
+```
+
+From the result, we can see that when K = 1, the performance on the training data is best. When K = 8, the test data performance is best. From the plot, we choose K to be 6, in which both training error and test error are small.
+
+## 5.
+```{r}
+knnTrainErr[6]
+knnTestErr[6]
+knn_train_pred = knn(train = trainX, test = trainX, cl = train_auto$mpg01, k = 6)
+plot(train_auto$displacement, train_auto$horsepower, col = c("blue","green")[train_auto$mpg01], xlab = "displacement",
+     ylab = "horsepower", main = "True class vs Predicted class by knn")
+points(train_auto$displacement, train_auto$horsepower, pch = c(2,3)[knn_train_pred])  
+legend("bottomright", c("true_mpg0","true_mpg1","pre_mpg0","pre_mpg1"), col = c("blue","green","black","black"), pch = c(1,1,2,3))
+
+```
+
+The training error and test error are 0.08653846 and 0.075 when K = 6. From the training data plot, we can see that most of the points are fitted well. 
+
+```{r}
+knn_test_pred = knn(train = trainX, test = testX, cl = train_auto$mpg01, k = 6)
+plot(test_auto$displacement, test_auto$horsepower, col = c("blue","green")[test_auto$mpg01], xlab = "displacement",
+     ylab = "horsepower", main = "True class vs Predicted class by knn")
+points(test_auto$displacement, test_auto$horsepower, pch = c(2,3)[knn_test_pred])  
+legend("bottomright", c("true_mpg0","true_mpg1","pre_mpg0","pre_mpg1"), col = c("blue","green","black","black"), pch = c(1,1,2,3))
+
+```
+
+From the test data plot, we can see that the fit is well.
+
+## 6. 
+
+No. We can only get the classification of every point by KNN. So we cannot get the probability of that point. Instead, we can get the classification of a given point. We can find its K nearest neighbor And calculate the number of points belong to each specific class. After comparing which is greater, we put the given point to that class.
+
+## 7.
+
+```{r}
+library(MASS)
+lda.fit = lda(mpg01 ~ displacement + horsepower + weight + acceleration, data = train_auto)
+lda.fit
+lda.predtrain = predict(lda.fit, train_auto)
+lda.classtrain = lda.predtrain$class
+table(lda.classtrain, train_auto$mpg01, dnn =c("Predicted", "Actual"))
+round(mean(lda.classtrain!= train_auto$mpg01),4)
+
+lda.predtest = predict(lda.fit, test_auto)
+lda.classtest = lda.predtest$class
+table(lda.classtest, test_auto$mpg01, dnn =c("Predicted", "Actual"))
+round(mean(lda.classtest!= test_auto$mpg01),4)
+```
+
+The training error of LDA is 0.1186. The test error of LDA is 0.075.
+
+```{r}
+qda.fit = qda(mpg01 ~ displacement + horsepower + weight + acceleration, data = train_auto)
+qda.fit
+qda.predtrain = predict(qda.fit, train_auto)
+qda.classtrain = qda.predtrain$class
+table(qda.classtrain, train_auto$mpg01, dnn =c("Predicted", "Actual"))
+round(mean(qda.classtrain!= train_auto$mpg01),4)
+
+qda.predtest = predict(qda.fit, test_auto)
+qda.classtest = qda.predtest$class
+table(qda.classtest, test_auto$mpg01, dnn =c("Predicted", "Actual"))
+round(mean(qda.classtest!= test_auto$mpg01),4)
+```
+
+The training error of QDA is 0.1026. The test error of QDA is 0.0625.
+
+
+The training error of logistic is 0.1089744, and the test error is 0.0875. The training error and test error are 0.08653846 and 0.075 when K = 6 in KNN. Logistic training error and test error are both greater than KNN error. The training error of LDA and QDA are 0.1186 and 0.1026. The test error of LDA and QDA are 0.075 and 0.0625. KNN has smallest training error and QDA has smallest test error. The boundary maybe a curve rather than a straight line.
+
+
+The LDA assumes that the observation are drawn from a Gaussian distribution with a common covariance matrix in each class. Conversely, the logistic regression may outperform LDA if these Gaussian assumptions are not hold. Since the LDA training error is greater than logistic training errors, the Gaussian assumption may not hold. That is the data may be not a Gaussian distribution. 
+
+KNN takes a different approach, non-parametric approach: no assumption are made about the shape of boundary. If the error of KNN is smaller than LDA and logistic regression, the boundary maybe highly non-linear. QDA serves as a compromise between KNN and LDA and logistic regression. QDA can perform better in a limited number of training observations because it make some assumptions about the form of the decision boundary. In our problem, the boundary maybe nonlinear.
+
+
+
+
+
+
+
+

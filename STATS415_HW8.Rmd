@@ -1,0 +1,171 @@
+---
+title: "STATS415_HW8"
+author: "Xiaoxue Xin"
+date: "4876 5091; Section 2"
+output: word_document
+---
+## (a)
+```{r}
+library(MASS)
+data(Boston)
+set.seed(34567)
+train_id = sample(1:nrow(Boston), trunc(nrow(Boston)*0.8))
+test_id = setdiff(seq(1,nrow(Boston)), train_id)
+attach(Boston)
+```
+
+## (b)
+
+
+```{r}
+library(boot)
+set.seed(34567)
+cv.error_poly = rep(0,10)
+for (i in 1:10) {
+  poly_fit = glm(nox~ poly(dis, i), data = Boston[train_id,])
+  cv.error_poly[i] = cv.glm(Boston[train_id,], poly_fit, K = 10)$delta[1]
+}
+cv.error_poly
+plot(1:10, cv.error_poly, xlab = 'd', ylab = 'CV error', type = 'l')
+```
+
+From the result, we can see that d = 7 has the smallest error. So, we can choose d = 7.
+
+```{r}
+polynom_fit  = glm(nox~poly(dis, 7), data = Boston[train_id,])
+summary(polynom_fit)
+```
+From the polynomial regression, we use seven order polynomial to fit the data, and the AIC is -1105.9. The coefficients of variables are shown above.
+
+Next, we use natural spline to fit the model.
+
+```{r}
+library(splines)
+set.seed(34567)
+cv.error_ns = rep(0,15)
+for (i in 1:15) {
+  ns_fit = glm(nox~ns(dis, i), data = Boston[train_id,])
+  cv.error_ns[i] = cv.glm(Boston[train_id,], ns_fit, K = 10)$delta[1]
+}
+plot(1:15, cv.error_ns, xlab = 'df', ylab = 'CV error', type = 'l')
+which.min(cv.error_ns)
+```
+
+From the result, we can see that df = 9 has the smallest error. So we choose df = 9. In case of natural spline, df equals number of knots. So we set 9 knots in our model.
+
+```{r}
+ns_fit = glm(nox~ ns(dis, df = 9), data = Boston[train_id,])
+summary(ns_fit)
+```
+From the result, we can see that the AIC is -1118.2, which is smaller than polynomial regression. So natural spline may be better than polynomial model.
+Next, we use smoothing spline to fit the data.
+
+```{r}
+set.seed(34567)
+ss_fit = smooth.spline(dis, nox, cv = TRUE)
+ss_fit$df
+smooth_fit = smooth.spline(dis, nox, df = ss_fit$df)
+ss_fit
+```
+From the result, we can see that df is 15.42984. The smoothing spline is smooth regression compared with natural spline.
+
+## (c)
+
+```{r}
+dis.grid = seq(from = range(dis)[1], to = range(dis)[2])
+fit.3 = lm(nox ~ poly(dis, 3), data = Boston[train_id,])
+pred_poly_3 = predict(fit.3, newdata = data.frame(dis = dis.grid))
+fit.11 = lm(nox ~ poly(dis, 11), data = Boston[train_id,])
+pred_poly_11 = predict(fit.11, newdata = data.frame(dis = dis.grid))
+poly_pred = predict(polynom_fit, newdata = data.frame(dis = dis.grid))
+plot(dis, nox, xlim = range(dis), cex = 0.5, col = 'darkgrey')
+title('polynomial regression')
+lines(dis.grid, pred_poly_3, lwd = 2, col = 'green')
+lines(dis.grid, poly_pred, lwd = 2, col = 'red')
+lines(dis.grid, pred_poly_11, lwd = 2, col = 'blue')
+legend('topright', legend = c('d=3','d=7','d=11'), col = c('green','red','blue'), lty = 1, lwd = 2, cex = 0.8)
+```
+
+From the plot, we can see that when dis increases, the concentration of nitrogen oxides decreases in case of d = 3, 11. The polynomial regression with d = 3,7,11 have similiar fit for dis from 2 to 9. When dis in (10,12), the fit (d = 7) is not good, which increases dramatically.
+
+```{r}
+dis.grid = seq(from = range(dis)[1], to = range(dis)[2])
+fit_ns_4 = glm(nox~ns(dis, df = 4), data = Boston[train_id,])
+pred_ns_4 = predict(fit_ns_4, newdata = data.frame(dis = dis.grid))
+fit_ns_13 = glm(nox~ns(dis, df = 13), data = Boston[train_id,])
+pred_ns_13 = predict(fit_ns_13, newdata = data.frame(dis = dis.grid))
+ns_pred = predict(ns_fit, newdata = data.frame(dis = dis.grid))
+plot(dis, nox, xlim = range(dis), cex = 0.5, col = 'darkgrey')
+title('natural spline regression')
+lines(dis.grid, pred_ns_4, lwd = 2, col = 'green')
+lines(dis.grid, ns_pred, lwd = 2, col = 'red')
+lines(dis.grid, pred_ns_13, lwd = 2, col = 'blue')
+legend('topright', legend = c('d=4','d=9','d=13'), col = c('green','red','blue'), lty = 1, lwd = 2, cex = 0.8)
+```
+
+From the plot, we can see that the three plots are close to each other. The nox decreases as dis increases. The natural spline is stable compared with polynomial regression, especially at the end. 
+
+```{r}
+dis.grid = seq(from = range(dis)[1], to = range(dis)[2])
+fit_ss_10 = smooth.spline(dis, nox, df = 10)
+fit_ss_20 = smooth.spline(dis, nox, df = 20)
+plot(dis, nox, xlim = range(dis), cex = 0.5, col = 'darkgrey')
+title('smoothing spline')
+lines(fit_ss_10, col = 'green', lwd = 2)
+lines(ss_fit, col = 'red', lwd = 2)
+lines(fit_ss_20, col = 'blue', lwd = 2)
+legend('topright', legend = c('10 DF', '15.15.42984 DF','20 DF'), col = c('green','red','blue'), lty = 1, lwd = 2, cex = 0.8)
+```
+
+From the plot, we can see that the three plots are nearly the same, which show that nox decreases as dis increases. The smoothing spline is even more stable and smooth than natural spline.
+
+## (d)
+
+From the previous result, the smoothing spline is better than polynomial regression, since it is more stable. It is better than natural spline in terms of smoothness. So we may choose smoothing spline as our best nonlinear regression to model dis and indus.
+
+
+```{r}
+library(gam)
+set.seed(34567)
+ss_fit = smooth.spline(dis, nox, cv = TRUE)
+df1 = ss_fit$df
+ss_fit_ind = smooth.spline(indus, nox, cv = TRUE)
+df2 = ss_fit_ind$df
+gam1 = gam(nox~ s(dis, 15.42984) + s(indus, 21.66602), data = Boston[train_id,])
+plot(gam1, se = TRUE, col = 'blue')
+```
+
+We use smoothing spline with df = 15.42984 to fit dis and df = 21.66602 smoothing spline to fit indus. From the dis plot, we can see that holding indus fixed, the nitrogen oxides concentration decreases at first and tends to the concentration of nitrogen oxides in the air at last as weighted mean of distances to five Boston employment centres increases. The indus plot indicates that holding dis fixed, the maximum nitrogen oxides concentration occurs approximately at point that indus = 20. It may suggest that 20% of non-retail business acres per town will lead to the highest nitrogen oxides concentration with dis fixed. The spline is not stable in the plot, but most concentration locate at (-0.05, 0.05)  with dis fixed.
+
+##(e)
+
+```{r}
+test.poly =predict(polynom_fit,Boston[-train_id,])
+test.ns =predict(ns_fit,Boston[-train_id,])
+test.ss =predict(ss_fit,dis[-train_id])
+test.gam =predict(gam1,Boston[-train_id,])
+nox.test= nox[-train_id]
+error.poly =mean((nox.test-test.poly)^2)
+error.ns =mean((nox.test-test.ns)^2)
+error.ss =mean((nox.test-test.ss$y)^2)
+error.gam =mean((nox.test-test.gam)^2)
+d <-data.frame("TestMSE" =c(error.poly, error.ns, error.ss, error.gam))
+rownames(d) <-c("poly regression", "natural spline", "smoothing spline","GAM")
+knitr::kable(d)
+```
+
+From the result, we can see that the GAM has the smallest test MSE. Thus we prefer GAM model.
+
+
+
+
+
+
+
+
+
+
+
+
+
+

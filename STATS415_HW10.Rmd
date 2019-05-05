@@ -1,0 +1,145 @@
+---
+title: "STATS415_HW10"
+author: "Xiaoxue Xin; Uniname: xiaoxuex"
+date: "4876 5091; Section: 002"
+output: word_document
+---
+
+```{r}
+library(MASS)
+data("crabs")
+attach(crabs)
+set.seed(45678)
+blueMale = which(sp == "B" & sex == "M")
+orangeMale = which(sp == "O" & sex == "M")
+blueFemale = which(sp == "B" & sex == "F")
+orangeFemale = which(sp == "O" & sex == "F")
+train_id = c(sample(blueMale, size = trunc(0.80 * length(blueMale))),
+             sample(orangeMale, size = trunc(0.80 * length(orangeMale))),
+             sample(blueFemale, size = trunc(0.80 * length(blueFemale))),
+             sample(orangeFemale, size = trunc(0.80 * length(orangeFemale))))
+crabs_train = crabs[train_id, ]
+crabs_test = crabs[-train_id,]
+```
+
+## (1)
+
+
+```{r cars}
+library(e1071)
+train_x = crabs_train[,-2][,-2]
+svmfit1 = svm(sp~., data = train_x, kernel = 'linear', cost = 0.1, scale = FALSE)
+summary(svmfit1)
+svmfit2 = svm(sp~., data = train_x, kernel = 'linear', cost = 1, scale = FALSE)
+summary(svmfit2)
+svmfit3 = svm(sp~., data = train_x, kernel = 'linear', cost = 10, scale = FALSE)
+summary(svmfit3)
+```
+
+From the result, we can see that when the cost increases, the number of support vector decreases.
+
+```{r}
+tune.out = tune(svm, sp~., data = train_x, kernel = 'linear', ranges = list(cost = c(0.0001, 0.001, 0.01, 0.1, 1, 5, 10)))
+plot(tune.out$performances[,1], tune.out$performances[,2], type = 'l', xlab = 'cost', ylab = 'CV error')
+summary(tune.out)
+```
+
+The errors associated with different values of cost are shown above. From cost 1, there is no error in the fitted model.
+
+```{r}
+bestmod = tune.out$best.model
+summary(bestmod)
+```
+
+From the result, we can see that when cost = 1, we get the best model. It is coincident with error result.
+
+```{r}
+test_x = crabs_test[,-2][,-2]
+table(true = test_x$sp , pred = predict(bestmod, newdata = test_x))
+```
+
+The test error of the best model is 0. We can see that the training error and test error for the best model are all 0, which means that the model is good.
+
+## (2)
+
+The nonlinear SVMs with radial kernels, with different values of gamma and cost are shown below.
+
+```{r}
+radial_svmfit1 = svm(sp~., data = train_x, kernel = 'radial', gamma = 0.1, cost = 0.1)
+summary(radial_svmfit1)
+radial_svmfit2 = svm(sp~., data = train_x, kernel = 'radial', gamma = 0.1, cost = 1)
+summary(radial_svmfit2)
+radial_svmfit3 = svm(sp~., data = train_x, kernel = 'radial', gamma = 1, cost = 0.1)
+summary(radial_svmfit3)
+radial_svmfit4 = svm(sp~., data = train_x, kernel = 'radial', gamma = 1, cost = 1)
+summary(radial_svmfit4)
+```
+
+```{r}
+radial_tune.out = tune(svm, sp~., data = train_x, kernel = 'radial', ranges = list(cost= c(0.01,0.1, 1,10,20), gamma = c(0.5,1,2,3,4)))
+summary(radial_tune.out)
+```
+
+The errors associated with different values of cost are shown above. We can also see the trend from the plot.
+
+```{r}
+with(radial_tune.out$performances, {
+  plot(error[gamma==0.5]~cost[gamma==0.5], ylim =c(0, .8),type = "o", col =rainbow(5)[1], ylab = "CV error", xlab = "cost")
+  lines(error[gamma==1]~cost[gamma==1],type = "o", col =rainbow(5)[2])
+  lines(error[gamma==2]~cost[gamma==2],type = "o", col =rainbow(5)[3])
+  lines(error[gamma==3]~cost[gamma==3],type = "o", col =rainbow(5)[4])
+  lines(error[gamma==4]~cost[gamma==4],type = "o", col =rainbow(5)[5])})
+legend("top", horiz = T, legend =c(0.5, 1:4), col =rainbow(5),lty = 1, cex = .75, title = "gamma")
+```
+
+```{r}
+bestmod.rad = radial_tune.out$best.model
+summary(bestmod.rad)
+test_x = crabs_test[,-2][,-2]
+table(true = test_x$sp , pred = predict(bestmod.rad, newdata = test_x))
+```
+
+The best model is svm with cost = 10 and gamma = 0.5. From the result of test error, we can see that there is no misclassification in the prediction.
+
+The nonlinear SVMs with polynomial kernels with different values of degree and cost are shown below.
+
+```{r}
+poly_svmfit1 = svm(sp~., data = train_x, kernel = 'polynomial', degree = 1, cost = 0.1)
+summary(poly_svmfit1)
+poly_svmfit2 = svm(sp~., data = train_x, kernel = 'polynomial', degree = 2, cost = 0.1)
+summary(poly_svmfit2)
+poly_svmfit3 = svm(sp~., data = train_x, kernel = 'polynomial', degree = 1, cost = 1)
+summary(poly_svmfit3)
+poly_svmfit4 = svm(sp~., data = train_x, kernel = 'polynomial', degree = 2, cost = 1)
+summary(poly_svmfit4)
+```
+
+```{r}
+poly_tune.out = tune(svm, sp~., data = train_x, kernel = 'polynomial', ranges = list(cost= c(0.01,0.1, 1,10,20), degree = c(1,2,3,4,5)))
+summary(radial_tune.out)
+```
+
+The CV errors are shown above. 
+
+```{r}
+with(poly_tune.out$performances, {
+  plot(error[degree==1]~cost[degree==1], ylim =c(0, .8),type = "o", col =rainbow(5)[1], ylab = "CV error", xlab = "cost")
+  lines(error[degree==2]~cost[degree==2],type = "o", col =rainbow(5)[2])
+  lines(error[degree==3]~cost[degree==3],type = "o", col =rainbow(5)[3])
+  lines(error[degree==4]~cost[degree==4],type = "o", col =rainbow(5)[4])
+  lines(error[degree==5]~cost[degree==5],type = "o", col =rainbow(5)[5])})
+legend("top", horiz = T, legend =c(1:5), col =rainbow(5),lty = 1, cex = .75, title = "polynomial")
+```
+
+The best model is svm with cost=10 and degree=1, which can be seen from the plot.  
+
+```{r}
+bestmod.poly = poly_tune.out$best.model
+summary(bestmod.poly)
+test_x = crabs_test[,-2][,-2]
+table(true = test_x$sp , pred = predict(bestmod.poly, newdata = test_x))
+```
+
+From the test error of the best model, we can see that there is no misclassification in prediction.
+
+

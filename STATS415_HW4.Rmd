@@ -1,0 +1,206 @@
+---
+title: "STATS415_HW4"
+author: "name: Xiaoxue Xin; unique name: xiaoxuex"
+date: "section 2; Fri 8:30- 10:00; GSI: Nick Seewald"
+output: word_document
+---
+
+## 1(c)
+
+```{r}
+lda_disc_fun1 = function(x){
+  -7/48*x - 7/96 + log(4/9)
+}
+lda_disc_fun2 = function(x){
+  7/16*x - 63/96 + log(5/9)
+}
+qda_disc_fun1 = function(x){
+  -3/28*(x+1)^2 - 0.5*log(14/3) + log(4/9)
+}
+qda_disc_fun2 = function(x){
+  -1/17*(x-3)^2 - 0.5*log(17/2) + log(5/9)
+}
+train_x = c(-4,-1,0,1,-1,2,3,4,7)
+train_y = c(-1,-1,-1,-1,1,1,1,1,1)
+n = length(train_x)
+ly = rep(0,n)
+for (i in 1:n) {
+  if (lda_disc_fun1(train_x[i]) > lda_disc_fun2(train_x[i])){
+    ly[i] = -1
+  } else{
+    ly[i] = 1
+  }
+  
+}
+err = function(x,y){
+  mean(x != y)
+}
+lda_train_err = err(ly,train_y)
+lda_train_err
+qy = rep(0,n)
+for (i in 1:n) {
+  if (qda_disc_fun1(train_x[i]) > qda_disc_fun2(train_x[i])){
+    qy[i] = -1
+  } else{
+    qy[i] = 1
+  }
+  
+}
+qda_train_err = err(qy,train_y)
+qda_train_err
+ly
+qy
+```
+
+From the result, we can see that the LDA predicts class [-1 -1 -1  1 -1  1  1  1  1], which is wrong at forth and fifth position. QDA predicts class [-1 -1 -1  1 -1  1  1  1  1], which is wrong at forth and fifth potion. The training errors are 2/9 for lda and 2/9 for qda.
+
+## (d)
+
+```{r}
+test_x = c(-1.5,-1,0,1,0.5,1,2.5,5)
+test_y = c(-1,-1,-1,-1,1,1,1,1)
+n = length(test_x)
+lyt = rep(0, n)
+qyt = rep(0,n)
+for (i in 1:n) {
+  if (lda_disc_fun1(test_x[i]) > lda_disc_fun2(test_x[i])){
+    lyt[i] = -1
+  } else{
+    lyt[i] = 1
+  }
+}
+lda_test_err = err(lyt,test_y)
+lda_test_err
+
+for (i in 1:n) {
+  if (qda_disc_fun1(test_x[i]) > qda_disc_fun2(test_x[i])){
+    qyt[i] = -1
+  } else{
+    qyt[i] = 1
+  }
+  
+}
+qda_test_err = err(qyt,test_y)
+qda_test_err
+lyt
+qyt
+```
+
+From the above result, we can see that both lda and qda have test error 0.25. The prediction of LDA is [-1 -1 -1  1 -1  1  1  1], and prediction of QDA is [-1 -1 -1  1 -1  1  1  1]. They have two wrong predictions.
+
+## (e)
+
+Based on the result in training data and test data, LDA is same with QDA. Since LDA is simple, maybe LDA is better than QDA.
+
+## Prob 2(a)
+
+```{r}
+library(ISLR)
+med_mpg = median(Auto$mpg)
+n = dim(Auto)[1]
+mpg01 = rep(0,n)
+for (i in 1:n) {
+  if (Auto$mpg[i] > med_mpg){
+    mpg01[i] = "1"
+  }
+}
+new_data = cbind(Auto, mpg01)
+```
+
+The mpg01 is added into the data.
+
+## (b)
+
+```{r}
+pairs(new_data[1:8], col = c("blue","red")[new_data$mpg01], pch = c(1,2)[new_data$mpg01])
+par(mfrow = c(1,4))
+boxplot(new_data$mpg01,new_data$cylinders, main = "cylinders",ylab = "cylinders")
+boxplot(new_data$mpg01,new_data$displacement, main = "displacement",ylab = "displacement")
+boxplot(new_data$mpg01,new_data$horsepower, main = "horsepower",ylab = "horsepower")
+boxplot(new_data$mpg01,new_data$weight, main = "weight",ylab = "weight")
+par(mfrow=c(1,3))
+boxplot(new_data$mpg01,new_data$acceleration, main = "acceleration",ylab = "acceleration")
+boxplot(new_data$mpg01,new_data$year, main = "year",ylab = "year")
+boxplot(new_data$mpg01,new_data$origin, main = "origin",ylab = "origin")
+```
+
+From the scatterplot, we can see that displacement, horsepower, weight, and acceleration may be useful in predicting mpg01. From the boxplots, displacement, horsepower, weight, and acceleration range in different interval for mpg01. 
+
+## (c)
+
+```{r}
+set.seed(12345)
+table(new_data$mpg01)
+mpg01_0 = which(new_data$mpg01 == 0)
+mpg01_1 = which(new_data$mpg01 == 1)
+train_index = c(sample(mpg01_0, size = trunc(0.80 * length(mpg01_0))), sample(mpg01_1, size = trunc(0.80 * length(mpg01_1))))
+Auto_train = new_data[train_index, ] 
+Auto_test = new_data[-train_index, ]
+nrow(Auto_train)
+```
+
+The data is divided into two parts: 312 trainning data and 81 test data.
+
+## (d)
+
+```{r}
+library(MASS)
+mpg01 = as.numeric(mpg01) - 1
+new_data1 = cbind(Auto, mpg01)
+Auto_train2 = new_data1[train_index, ]
+Auto_test2 = new_data1[-train_index, ]
+lda.fit = lda(mpg01 ~ horsepower + weight + acceleration + displacement, data=Auto_train2)
+lda.fit
+names(predict(lda.fit, Auto_train2))
+head(predict(lda.fit, Auto_train2)$class, n = 5)
+head(predict(lda.fit, Auto_train2)$posterior, n = 5)
+lda_train_pred = predict(lda.fit, Auto_train2)$class
+lda_test_pred = predict(lda.fit, Auto_test2)$class
+calc_class_err = function(actual, predicted){ 
+  mean(actual != predicted)
+}
+calc_class_err(predicted = lda_train_pred, actual = Auto_train2$mpg01)
+calc_class_err(predicted = lda_test_pred, actual = Auto_test2$mpg01)
+```
+
+The training error is 0.1185897, and the test error is 0.075.
+
+```{r}
+mpg01 = as.factor(mpg01)
+Auto_test2$mpg01
+plot(Auto_test2$horsepower,Auto_test2$weight, col=c("red","blue")[Auto_test2$Cdnew], xlab = "horsepower", ylab = "weight", main = "Real vs Predicted by LDA")
+points(Auto_test2$horsepower,Auto_test2$weight, pch=c(2,3,5)[lda_test_pred])
+```
+
+
+```{r}
+qda.fit = qda(mpg01 ~ horsepower + weight + acceleration + displacement,data=Auto_train2)
+qda.fit
+names(predict(qda.fit, Auto_train2))
+head(predict(qda.fit, Auto_train2)$class, n = 5)
+head(predict(qda.fit, Auto_train2)$posterior, n = 5)
+qda_train_pred = predict(qda.fit, Auto_train2)$class
+qda_test_pred = predict(qda.fit, Auto_test2)$class
+
+calc_class_err = function(actual, predicted){ 
+  mean(actual != predicted)
+}
+calc_class_err(predicted = qda_train_pred, actual = Auto_train2$mpg01)
+calc_class_err(predicted = qda_test_pred, actual = Auto_test2$mpg01)
+```
+
+The training error is 0.1025641, and the test error is 0.0625。
+
+```{r}
+mpg01 = as.factor(mpg01)
+plot(Auto_train2$horsepower,Auto_train2$weight, col=c("red","blue")[Auto_train2$mpg01], xlab = "horsepower", ylab = "weight", main = "Real vs Predicted by LDA")
+points(Auto_train2$horsepower,Auto_train2$weight, pch=c(2,3,5)[qda_train_pred])
+```
+
+We use horsepower and weight in the plot. The prediction is well, and locate at nearly same points with true data.
+
+## (f)
+
+Based on the previous results, for LDA, training error is 0.1185897, and the test error is 0.075. For QDA, training error is 0.1025641, and the test error is 0.0625. The errors of QDA are both smaller than errors of LDA. So QDA maybe better for fitting the data. Since the covariance in QDA are allowed different, we may say that the covariances maybe different in this situation.
+
+

@@ -1,0 +1,106 @@
+---
+title: "STATS415_HW3"
+author: "name: Xiaoxue Xin; unique name: xiaoxuex"
+date: "section 2; Fri 8:30- 10:00; GSI: Nick Seewald"
+output: word_document
+---
+
+## 1.
+```{r}
+library(ISLR)
+data("Carseats")
+dim(Carseats)
+train_data = Carseats[1:360,]
+test_data = Carseats[361:400,]
+model1 = lm(Sales~.,data = train_data)
+summary(model1)
+model2 = lm(Sales~ CompPrice+Income+Advertising+Price+ShelveLoc+Age, data = train_data)
+summary(model2)
+
+```
+
+
+```{r}
+mse <- function(model, y, data){
+  yhat <- predict(model,data)
+  mean((y - yhat)^2)
+}
+
+model1_trainMSE.OLS = mse(model1, train_data$Sales, train_data)
+model1_trainMSE.OLS
+model1_testMSE.OLS = mse(model1, test_data$Sales, test_data)
+model1_testMSE.OLS
+model2_trainMSE.OLS = mse(model2, train_data$Sales, train_data)
+model2_trainMSE.OLS
+model2_testMSE.OLS = mse(model2, test_data$Sales, test_data)
+model2_testMSE.OLS
+```
+
+For model one, the training error is 1.010792, and the test error is 0.9903956. The test error is slight smaller than the training error. For the model two, the training error is 1.021013, and the test data is 1.0041. The test error is slight smaller than the training error. The training error and test error for model one are smaller than the corresponding values of model two. In both of the two models, training errors are greater than test errors. 
+
+
+## 2.
+
+From my perspective, training error with K = 1 will be better than K = 10. Since the training set and test set are same in K = 1 case when calculate training error, prediction values are same with response. So the training MSE is 0 in K = 1 case and greater than the value in K = 10 case. However, when consider test error, the test data is different with training data, K = 10 would have smaller test error, which is smoother than K = 1 case. 
+
+## 3.
+
+I will standardize data first. Since almost all Carseats'CompPrice data are more than 100 and Carseats'Advertising data are nearly less than 20. They have different weight toward the distance of data points. After scaling, they have same contribution toward final result.
+
+## 4.
+
+```{r}
+new_variable = cbind(Carseats$CompPrice,Carseats$Income,Carseats$Advertising,Carseats$Price,Carseats$Age)
+new_train = new_variable[1:360,]
+new_test = new_variable[361:400,]
+
+k_range = c(1,3,5,10,15,20,25,50,360)
+trainMSE.KNN = c()
+library(FNN)
+for (i in 1:length(k_range)) {
+  knnTrain <- knn.reg(train = new_train, test = new_train, y = train_data$Sales, k = k_range[i])
+  trainMSE.KNN[i] <- mean((train_data$Sales - knnTrain$pred)^2)
+  
+}
+
+trainMSE.KNN
+
+testMSE.KNN = c()
+for (i in 1:length(k_range)) {
+  knnTest <- knn.reg(train = new_train, test = new_test, y = train_data$Sales, k = k_range[i])
+  testMSE.KNN[i] <- mean((test_data$Sales - knnTest$pred)^2)
+}
+
+testMSE.KNN
+
+plot(trainMSE.KNN ~ I(1/k_range), type = 'b', lwd = 2, col = 'blue', pch = 21,
+     main = 'training and test mse for knn', xlab = '1/K', ylab = 'mse')
+lines(testMSE.KNN ~ I(1/k_range) , type = 'b', lwd = 2, col = 'red', pch = 22)
+legend('right', legend =c("Training KNN", "Test KNN"), col =c("blue", "red"), horiz = TRUE, cex = .75,lwd =c(2, 2), pch =c(21, 22), lty =c(1,1))
+
+```
+
+When K = 1, it achieves lowest training error. When K = 5, it achieves lowest test error. The shape of plot of training mse is decreasing as K decreases. The optimal value of K in this case is 1. The shape of test error is nearly quadratic. The optimal point is K = 5. 
+
+## 5.
+
+```{r}
+#ln_model2 = lm(Sales~ CompPrice+Income+Advertising+Price+ShelveLoc+Age, data = test_data)
+yyhat = predict(model2, test_data)
+residu = test_data$Sales - yyhat
+plot(residu ~ yyhat, main = 'model2', xlim = c(2,16), ylim = c(-3,6))
+abline(a = 0, b = 0, col = 'gray60')
+knn_model = knn.reg(train = new_train, test = new_test, y = train_data$Sales, k = 5)
+residuals = test_data$Sales - knn_model$pred
+plot(residuals~ knn_model$pred, main = 'knn', xlim = c(2,16), ylim = c(-3,6))
+abline(a = 0, b = 0, col = 'gray60')
+
+```
+
+From the above plot, we know that KNN regression fits well for smooth data. On the other hand, the residual of linear regression range on -2 to 2, which is narrow compared with KNN regression. Thus, the KNN residuals are concentrated on narrow x-axis, and linear regression residuals are concentrated on narrow y-axis.
+
+
+
+
+
+

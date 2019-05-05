@@ -1,0 +1,87 @@
+---
+title: "STATS415_HW2"
+author: "name: Xiaoxue Xin; unique name: xiaoxuex"
+date: "section 2; Fri 8:30- 10:00; GSI: Nick Seewald"
+output: word_document
+---
+## 1.
+```{r}
+library(ISLR)
+data("Carseats")
+result1 <- lm(Sales~., data = Carseats)
+summary(result1)
+```
+
+From the above result, we can see that the value of intercept is 5.6606231. The coefficient of CompPrice is 0.0928153. The coefficient of Income is 0.0158028. The coefficient of Advertising is 0.1230951. The coefficient of Population is 0.0002079. The coefficient of Price is -0.0953579. Since the ShelveLoc is categorical variable. The base line is bad location. The coefficient of ShelveLocGood is 4.8501827 compared with ShelveLocbad. The coefficient of ShelveLocMedium is 1.9567148 compared with ShelveLocbad. The coefficient of Age is -0.0460452. The coefficient of Education is -0.0211018. The coefficient of UrbanYes is 0.1228864. The coefficient of USYes is -0.1840928. And the adjusted R-squared value is 0.8698, which is close to 1. We know that the model fits well.
+
+The plot of residual is 
+```{r}
+plot(result1$residuals ~ result1$fitted.values, main = "result 1 Residual Plot", xlab = "Fitted values", ylab = "Residuals")
+abline(a = 0, b = 0, col = "gray60")
+```
+
+From the plot, we can see that the mean of residual is 0, and it has constant variance.
+
+## 2.
+
+The variables CompPrice, Income, Advertising, Price, ShelveLocGood, ShelveLocMedium, and Age correspond to significant p-values. The corresponding null hypothesis is the coefficient of variable equals to 0. 
+
+## 3.
+
+```{r}
+result2 = lm(Sales~ CompPrice+Income+Advertising+Price+ShelveLoc+Age, data = Carseats)
+summary(result2)
+```
+
+The R-squared value is 0.8697, which is slight smaller than the R-squared value 0.8698 in previous result. There is nearly no difference between the two medels. Since the second model has fewer variables, it is better than the first one.
+
+## 4.
+
+We compare the two models using ANOVA function.
+
+```{r}
+anova(result1,result2)
+```
+
+From the result, we can test the null hypothesis: coefficients of Population, Education, Urban, and US are all equal to 0. Under this hypothesis, the two models would be the same. The p-value is 0.358, which is greater than 0.05. So, we fail to reject the null hypothesis at level 0.05. There is no big difference between the two models. Their R-squared values are also nearly the same.   
+
+## 5. 
+
+The model equation from the third question is:
+
+Sales = 5.475226 + 0.092571*CompPrice + 0.015785*Income + 0.115903*Advertising -0.095319*Price + 4.835675*ShelveLocGood + 1.951993*ShelveLocMedium -0.046128*Age
+         
+The coefficient of CompPrice is 0.092571, which means that if the Comprice increase by one unit, then the sales will increase 0.092571 units. 
+
+The coefficient of Income is 0.015785, which means that if the Income increase by one unit, then the sales will increase 0.015785 units. 
+
+The coefficient of Advertising is 0.115903, which means that if the Advertising increase by one unit, then the sales will increase 0.115903 units. 
+
+The coefficient of Price is -0.095319, which means that if the Price increase by one unit, then the sales will decrease 0.095319 units. 
+
+The coefficient of Age is -0.046128, which means that if the Age increase by one unit, then the sales will decrease 0.046128 units. 
+
+Since the ShelveLoc is categorical variable. The base line is bad condition built in the intercept. The coefficient of ShelveLocGood is 4.835675 compared with ShelveLocbad. The coefficient of ShelveLocMedium is 1.951993 compared with ShelveLocbad. We know that if the shelve location is good or medium, then the sales will increase 4.835675 and 1.951993 respectively than bad location. 
+
+## 6.
+
+```{r}
+result3 = lm(Sales~ CompPrice+Income+Advertising+Price+ShelveLoc+Age+ShelveLoc:Price, data = Carseats)
+summary(result3)
+```
+
+From the above result, we can see that the value of intercept is 5.866758. The coefficient of CompPrice is 0.092592. The coefficient of Income is 0.015766. The coefficient of Advertising is 0.116003. The coefficient of Price is -0.098594. Since the ShelveLoc is categorical variable. The base line is bad location. The coefficient of ShelveLocGood is 4.185088 compared with ShelveLocbad. The coefficient of ShelveLocMedium is 1.535031 compared with ShelveLocbad. The coefficient of Age is -0.046494. The coefficient of Price:ShelveLocGood is 0.005619. The coefficient of Price:ShelveLocMedium is 0.003650.
+
+The interpretation of coefficients of interaction terms: Price:ShelveLocGood: the effect of price on sales is higher by 0.005619 under good shelve location compared with bad location. Price:ShelveLocMedium: the effect of price on sales is higher by 0.003650 under medium shelve location compared with bad location. 
+
+The p-value of the two interaction terms are 0.3730 and 0.4984. We cannot reject the null hypothesis that their coefficients are 0. So, it is not necessary to add these two terms from their p-value.
+
+## 7.
+
+```{r}
+anova(result2,result3)
+```
+
+From the p-value, which is 0.6593, we know that we fail to reject null hypothesis that the coefficient of the interaction term is 0. So, there is no big difference between two models. It is consistent with the previous conclusion. 
+
+
