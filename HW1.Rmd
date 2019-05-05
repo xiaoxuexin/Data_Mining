@@ -1,0 +1,123 @@
+---
+title: "STATS415_HW1"
+author: "Xiaoxue Xin"
+date: "4876 5091"
+output: word_document
+---
+## Problem 1
+(a) categorial variable: above_22 (whether or not the student's age is above 22)
+    
+    ordinal variable: teenager, early twenties, and mid twenties
+    
+    interval variable: [18,20][21,23][24,26][27,29] (the student's age intervals)
+    
+    ratio variable: age (the age of each student)
+
+(b) female students in 415 (The gender is independent with age.) 
+
+(c) graduate students in Stats 415 course(Since the graduate students tend to older than undergraduate students in 415 course, we cannot make plausible inference on all students's situation.)
+
+## Problem 2
+(a)If the term appears in one document, the f(i,j)* will be log(n) multiple of f(i,j). If the term appears in every document, the value after transformation will be 0.
+
+(b)The greater f(i,j)*, the more important this word. f(i,j) is the frequency of jth word in ith document. If ith word only appears in a few documents, then the value of transformation of f(i,j) will be greater than before. If it appears in many documents, the transformation will be smaller than before.
+
+Since some words, such as a, an, the, may appear more frequently than other words in general. After this transformation, it is adjusted by offsetting this frequency. We can find the real important word.
+
+## Problem 3
+```{r}
+college = read.csv("College.csv",header = TRUE)
+rownames(college) = college[,1]
+college = college[,-1]
+# fix(college)
+```
+
+```{r}
+# as.factor(college$Private)
+summary(college)
+```
+
+From the above results, we can see that the majority of colleges are private. The applications to these colleges range from 81 to 48094. On the other hand, the acceptance ranges from 72 to 26330, and the enrolled students range from 35 to 6392. The mean of enrolled number is 780. The top 10 percentage of students enrolled varies from 1% to 96% among different colleges. And the percentage of top 25 students ranges from 9% to 100% in colleges. On average, there is 27.56% top 10 students and 55.8% top 25% students in colleges. The number of full-time undergraduate students ranges from 139 to 31643. The number of part-time undergraduate students ranges from 1 to 21836. There are 3700 full-time students in colleges on average. The lowest out-of-state tuition is 2340, while the highest is 21700. The room and board costs range from 1780 to 8124. The book costs range from 96 to 2340. The personal spending range from 250 to 6800. The percentage of Ph.D.'s faculty range from 8% to 103%. But the maximum value of Ph.D. faculty should be 100%. There is maybe an error in the data that need further process before we get the final conclusion. The percentage of faculty with terminal degree range from 24% to 100%. The student/faculty ratio range from 2.5% to 39.8%. The percentage of donated alumni range from 0 to 64%. The instructional expenditure per student is 9660 on average, which from 3186 to 56223. The graduation rate is 65.46% on average, which range from 10% to 118%. We should know that there is an error with the graduation rate that excess 100%.
+
+```{r}
+cor(college[,2:4])
+```
+
+The correlation among application, acceptance, and enrollment are almost to 1, which means that the three variables are highly related with each other
+```{r}
+pairs(college[,2:4])
+```
+
+From the plots, we can also see the positive relationship between these three variables.
+
+```{r}
+par(mfrow = c(1,3))
+boxplot(college$Enroll)
+boxplot(college$Accept)
+boxplot(college$Top25perc)
+par(mfrow = c(1,3))
+boxplot(college$F.Undergrad)
+boxplot(college$P.Undergrad)
+boxplot(college$Outstate)
+par(mfrow = c(1,3))
+boxplot(college$Room.Board)
+boxplot(college$Books)
+boxplot(college$Personal)
+par(mfrow = c(1,3))
+boxplot(college$Terminal)
+boxplot(college$S.F.Ratio)
+boxplot(college$perc.alumni)
+```
+
+
+```{r}
+par(mfrow = c(2,3))
+hist(as.numeric(college$Private))
+hist(college$Apps)
+hist(college$Top10perc)
+hist(college$PhD)
+hist(college$Grad.Rate)
+hist(college$Expend)
+```
+
+From the above plots, we can see that the enrollments concentrate between 0 and 1000. Only a few colleges' top 10% students percentage are greater than 60%. There are large percentage of Ph.D. faculty in many colleges. The shape of graduation rate seems like a bell, which implies that the graduation rate may be a normal distribution. We need further diagnostic method to decide whether it is a normal variable.
+
+```{r}
+list1 = which(college$Private == "Yes")
+list2 = which(college$Private == "No")
+pri = college$Outstate[list1]
+pub = college$Outstate[list2]
+qua <- c("Private", "Public")
+boxplot(pri,pub,names = qua, horizontal = TRUE,main = "outstates tuition", xlab = "tuition")
+```
+
+From the above plot, we can see that private colleges are more expensive than public colleges in general for the out-of-state students. But there also exist some public university that have high tuition fee. Next, we can find out the most expensive public university.
+
+```{r}
+max(college$Outstate[list2])
+which(college$Outstate == 15732)
+college[638,]
+```
+From the above results, we can see that the University of Michigan at Ann Arbor has the highest tuition towards students from other states. The tuition is 15732, which is consistent with the number in boxplot.
+
+```{r}
+Elite = rep("No",nrow(college))
+Elite[college$Top10perc > 50] = "Yes"
+Elite = as.factor(Elite)
+college = data.frame(college,Elite)
+college[638,19]
+summary(college$Elite)
+```
+Next, we add a new variable, Elite, which divide the colleges into two groups based on whether or not the porportion of students coming from top 10% of their high school classes exceeds 50%. From the consequence, we can see that there are only 78 colleges are elite, which include University of Michigan at Ann Arbor.
+
+```{r}
+adm_ration = college$Accept/college$Apps
+list3 = which(college$Elite == "Yes")
+list4 = which(college$Elite == "No")
+eli = adm_ration[list3]
+neli = adm_ration[list4]
+quan = c("Elite", "Non-elite")
+boxplot(eli,neli,names = quan, horizontal = TRUE, main = "admission rate", xlab = "admission ration")
+```
+
+From the plot, we can see the relationship between admission rate and whether the college is elite. The admission rates of elite colleges are lower than the colleges that are not elite in general.
